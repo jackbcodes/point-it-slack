@@ -12,7 +12,7 @@ const app = new App({
   processBeforeResponse: true,
 })
 // Global error handler
-app.error(console.log)
+// app.error(console.log)
 
 // Handle `/echo` command invocations
 app.command('/echo-from-firebase', async ({ command, ack, say }) => {

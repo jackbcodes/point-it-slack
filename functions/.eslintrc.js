@@ -11,11 +11,11 @@ module.exports = {
     'plugin:import/typescript',
     'google',
     'plugin:@typescript-eslint/recommended',
-    'plugin:prettier/recommended',
+    'prettier',
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    project: ['functions/tsconfig.json', 'functions/tsconfig.dev.json'],
+    project: ['tsconfig.json', 'tsconfig.dev.json'],
     sourceType: 'module',
   },
   ignorePatterns: [
@@ -23,7 +23,7 @@ module.exports = {
   ],
   plugins: ['@typescript-eslint', 'import'],
   rules: {
-    quotes: ['error', 'double'],
+    quotes: ['error', 'single'],
     'import/no-unresolved': 0,
   },
 }
