@@ -3,6 +3,9 @@
 import { config, https } from 'firebase-functions'
 import { App, ExpressReceiver } from '@slack/bolt'
 
+import { nowOrLaterActionBlock, dateTimeInputBlock, getChannelsPlayersBlock } from './blocks'
+import { formatUsers } from './utils'
+
 const expressReceiver = new ExpressReceiver({
   signingSecret: config().slack.signing_secret,
   endpoints: '/events',
@@ -16,189 +19,176 @@ const app = new App({
 })
 
 // TODO: Change to shortcut
-
-app.command('/pointit', async ({ ack, body, client, logger, say, payload }) => {
-  // Acknowledge the command request
+// Listen for command to launch the modal
+app.command('/pointit', async ({ ack, body, client, logger, payload }) => {
   await ack()
 
-  logger.info('payload', payload.channel_name)
-
   try {
-    // Call views.open with the built-in client
     const result = await client.views.open({
-      // Pass a valid trigger_id within 3 seconds of receiving it
       trigger_id: body.trigger_id,
-      // View payload
       view: {
         type: 'modal',
-        // View identifier
-        callback_id: 'view_1',
         title: {
+          // TODO: Add Icon
           type: 'plain_text',
-          text: 'Modal title Foo5',
+          text: 'PointIt',
         },
         blocks: [
+          // {
+          //   type: 'divider',
+          // },
+          // {
+          //   dispatch_action: true,
+          //   type: 'input',
+          //   element: {
+          //     type: 'plain_text_input',
+          //     action_id: 'plain_text_input-action',
+          //   },
+          //   label: {
+          //     type: 'plain_text',
+          //     text: 'Enter VSTS ticket number e.g. 898380',
+          //     emoji: true,
+          //   },
+          // },
           {
-            block_id: 'channel_name',
-            value: payload.channel_name
+            type: 'divider',
           },
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: 'Welcome to a modal with _blocks_',
-            },
-            accessory: {
-              type: 'button',
-              text: {
-                type: 'plain_text',
-                text: 'Click me!',
-              },
-              action_id: 'button_',
-            },
-          },
-          {
-            block_id: 'users',
-            type: 'input',
-            element: {
-              type: 'multi_users_select',
-              placeholder: {
-                type: 'plain_text',
-                text: 'Select users',
-                emoji: true,
-              },
-              action_id: 'multi_users_select-action',
-            },
-            label: {
-              type: 'plain_text',
-              text: 'Label',
-              emoji: true,
-            },
-          },
+          ...nowOrLaterActionBlock(),
         ],
-        submit: {
-          type: 'plain_text',
-          text: 'Submit',
-        },
       },
     })
-    // await say('Hello world!')
-
     logger.info('result', result)
   } catch (error) {
     logger.error(error)
   }
 })
 
-// app.view
-
-// Listen for a button invocation with action_id `submit_btn` (assume it's inside of a modal)
-app.view('view_1', async ({ ack, view, client, logger, payload }) => {
-  // Acknowledge the button request
+// Listen for a now-or-later action
+app.action('now-or-later', async ({ ack, body, client, action }) => {
   await ack()
 
-  // call Jack & Aaron's function here
-  // On success
-  // say the url back to slack and pass back the mentions or post to channel
-  const result = Object.entries(view.state.values).map(([key, value]) => value)
+  const nowOrLater = action['selected_option'].value
 
-  logger.info('payload', JSON.stringify(payload))
-  logger.info('selected_users', result[0])
-
-
-  // <@U024BE7LH>
-  // const users = view.state.values['GdSF']['multi_users_select-action'].selected_users;
-  const users = view.state.values['users']['multi_users_select-action'].selected_users;
-
-  const formattedUsers = users.map(user => `<@${user}>`).join(' ');
-  // const formattedUsers = '';
-
-  // Message the user
-  try {
-    await client.chat.postMessage({
-      channel: 'pointit', // TODO: change this to the channel that the user is in
-      // text: 'Your submission was successful, @',
+  const result = await client.views.update({
+    view_id: body.view.id,
+    hash: body.view.hash,
+    view: {
+      type: 'modal',
+      // TODO: Rename callback id
+      callback_id: 'pointit-modal',
+      title: {
+        type: 'plain_text',
+        text: 'PointIt',
+      },
       blocks: [
         {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `This is returned from the view 1 ${formattedUsers}`,
-          },
-          accessory: {
-            type: 'button',
-            text: {
-              type: 'plain_text',
-              text: 'Click Me',
-            },
-            action_id: 'button_click',
-          },
+          type: 'divider',
+        },
+        ...(nowOrLater === 'later' ? dateTimeInputBlock() : []),
+        ...getChannelsPlayersBlock(),
+      ],
+      submit: {
+        type: 'plain_text',
+        text: 'Submit',
+      },
+    },
+  })
+})
+
+const generatePointItSessionMessage = ({ channel, formattedUsers, gameUrl, initiatingUser }) => ({
+  channel,
+  blocks: [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `Hi ${formattedUsers}
+
+You have been invited to vote in a <${gameUrl}|PointIt session>.
+
+        `,
+      },
+      accessory: {
+        type: 'button',
+        value: gameUrl,
+        style: 'primary',
+        text: {
+          type: 'plain_text',
+          text: 'Join session',
+        },
+      },
+    },
+    {
+      type: 'divider',
+    },
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'image',
+          image_url: initiatingUser.image,
+          alt_text: initiatingUser.displayName,
+        },
+        {
+          type: 'mrkdwn',
+          text: `Started by ${initiatingUser.displayName}`,
         },
       ],
-    })
+    },
+  ],
+})
+
+// Listen for a view_submission event
+app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) => {
+  await ack()
+
+  logger.info('payload2', JSON.stringify({ payload, body }))
+
+  // TODO: Call Jack & Aaron's function here try...catch
+  const gameUrl = 'https://point-it-git-story-ado-integration-point-it.vercel.app/game/yfSZS3OXrlKoKbuQq0io'
+
+  const users = view.state.values['users']['user-select-action'].selected_users
+  const formattedUsers = formatUsers(users)
+
+  const {
+    user: {
+      profile: { image_24, display_name },
+    },
+  } = await client.users.info({
+    user: body.user.id,
+  })
+
+  console.log(image_24, display_name)
+
+  const pointItSessionMessage = generatePointItSessionMessage({
+    channel: view.state.values['channel']['channel-select-action'].selected_conversation,
+    formattedUsers,
+    gameUrl,
+    initiatingUser: {
+      image: image_24,
+      displayName: display_name,
+    },
+  })
+
+  try {
+    // TODO: Add scheduling here...
+    const date = view.state.values['date']?.['datepicker-action'].selected_date
+    const time = view.state.values['time']?.['timepicker-action'].selected_time
+    if (date) {
+      console.log(Date.parse([date, time].join('T')))
+      await client.chat.scheduleMessage({
+        ...pointItSessionMessage,
+        text: "Looking towards the future",
+        post_at: Date.parse([date, time].join('T'))/1000,
+      })
+      // TODO: Post confirmation message for the posters eyes only
+      return
+    }
+
+    await client.chat.postMessage(pointItSessionMessage)
   } catch (error) {
     logger.error(error)
   }
-
-  // app.message('hello', async ({ message, say }) => {
-  //   await say({
-  //     blocks: [
-  //       {
-  //         type: 'section',
-  //         text: {
-  //           type: 'mrkdwn',
-  //           text: `Hey there`,
-  //         },
-  //         accessory: {
-  //           type: 'button',
-  //           text: {
-  //             type: 'plain_text',
-  //             text: 'Click Me',
-  //           },
-  //           action_id: 'button_click',
-  //         },
-  //       },
-  //     ],
-  //   })
-  // })
-
-  // try {
-  //   // Call views.update with the built-in client
-  //   const result = await client.views.update({
-  //     // Pass the view_id
-  //     view_id: body.view.id,
-  //     // Pass the current hash to avoid race conditions
-  //     hash: body.view.hash,
-  //     // View payload with updated blocks
-  //     view: {
-  //       type: 'modal',
-  //       // View identifier
-  //       callback_id: 'view_1',
-  //       title: {
-  //         type: 'plain_text',
-  //         text: 'Updated modal'
-  //       },
-  //       blocks: [
-  //         {
-  //           type: 'section',
-  //           text: {
-  //             type: 'plain_text',
-  //             text: 'You updated the modal!'
-  //           }
-  //         },
-  //         {
-  //           type: 'image',
-  //           image_url: 'https://media.giphy.com/media/SVZGEcYt7brkFUyU90/giphy.gif',
-  //           alt_text: 'Yay! The modal was updated'
-  //         }
-  //       ]
-  //     }
-  //   });
-  //   logger.info(result);
-  // }
-  // catch (error) {
-  //   logger.error(error);
-  // }
 })
 
 // https://{your domain}.cloudfunctions.net/slack/events
