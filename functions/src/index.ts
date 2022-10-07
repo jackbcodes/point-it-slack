@@ -126,7 +126,7 @@ const generatePointItSessionMessage = ({ channel, formattedUsers, gameUrl, initi
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: 'You have been invited to play in a PointIt game.',
+        text: 'You have been invited to join a PointIt game.',
       },
     },
     {
@@ -564,6 +564,109 @@ app.action('join-session', async ({ ack, payload, body, client }) => {
       channel: 'general',
       ts: '',
     })
+  }
+})
+
+// Listen for users opening your App Home - CURRENTLY NOT WORKING
+app.event('app_home_opened', async ({ event, client, logger }) => {
+  try {
+    // Call views.publish with the built-in client
+    const result = await client.views.publish({
+      // Use the user ID associated with the event
+      user_id: event.user,
+      view: {
+        type: 'home',
+        blocks: [
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: 'PointIt',
+            },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'plain_text',
+              text: 'PointIt is a web app to be used by agile teams for story refinement. The web app mimics the planning poker style refinement where participants vote story points for a specific work item. These points represent their estimates for complexity for the item in discussion.',
+              emoji: true,
+            },
+          },
+          {
+            type: 'divider',
+          },
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: 'Installation',
+            },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'plain_text',
+              text: 'To access PointIt simply type @pointit in the slack channel you wish to use it in.',
+              emoji: true,
+            },
+          },
+          {
+            type: 'divider',
+          },
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: 'Start command',
+            },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'plain_text',
+              text: 'When a user runs this command, the Slack app with create a game in the Firebase database and construct a URL for players to join. It will send this URL in the channel/group the command was run in and notify everyone and game has started and it is ready to join.The name of the game (displayed on the web app) will be the channel name.',
+              emoji: true,
+            },
+          },
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: 'Schedule command',
+            },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'plain_text',
+              text: 'When a user runs this command, a modal will open up and the user will be asked to choose a date and time they want to schedule the session for. They will also choose a channel or specific users to include in the session. When the date/time they choose comes, the Slack app will create a game, construct the URL and notify all selected participants.We will also need to add capability to view and manage scheduled sessions so that they can be deleted or edited.',
+              emoji: true,
+            },
+          },
+          {
+            type: 'divider',
+          },
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: 'Link to web app',
+            },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: 'Please click <https://pointit.dev|here> for a direct link to the web app',
+            },
+          },
+        ],
+      },
+    })
+
+    logger.info(result)
+  } catch (error) {
+    logger.error(error)
   }
 })
 
