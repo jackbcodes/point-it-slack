@@ -1,5 +1,8 @@
 // @ts-nocheck
 
+import * as dayjs from 'dayjs'
+// import * as advancedFormat from 'dayjs/plugin/advancedFormat'
+
 import { config, https } from 'firebase-functions'
 import admin from 'firebase-admin'
 
@@ -9,6 +12,8 @@ import { App, ExpressReceiver } from '@slack/bolt'
 
 import { nowOrLaterActionBlock, dateTimeInputBlock, getChannelsPlayersBlock } from './blocks'
 import { formatUsers } from './utils'
+
+// dayjs.extend(advancedFormat)
 
 admin.initializeApp()
 
@@ -200,23 +205,68 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
   })
 
   try {
-    // TODO: Add scheduling here...
     const date = view.state.values['date']?.['datepicker-action'].selected_date
     const time = view.state.values['time']?.['timepicker-action'].selected_time
+
+    // TODO: Fix time zone malarky
+    // users.info zimezone... https://github.com/slackapi/bolt-js/issues/944
+    const dateTime = dayjs(`${date} ${time}`).subtract(1, 'hour')
+
+    console.log('dateTime', date, time, dateTime, dateTime.format('HH:mm'))
+
     if (date) {
       console.log(Date.parse([date, time].join('T')))
-      await client.chat.scheduleMessage({
+      const scheduledMessage = await client.chat.scheduleMessage({
         ...pointItSessionMessage,
-        text: 'Looking towards the future',
-        post_at: Date.parse([date, time].join('T')) / 1000,
+        text: 'PointIt session',
+        post_at: String(dateTime.unix()),
+      })
+
+      console.log(scheduledMessage)
+
+      // TODO: Add delete session
+      await client.chat.postEphemeral({
+        user: body.user.id,
+        channel,
+        text: `:alarm_clock: Your PointIt session is scheduled for ${dateTime.format('HH:mmA on dddd, D MMMM')}`,
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `:alarm_clock: Your PointIt session is scheduled for ${dateTime.format('HH:mmA on dddd, D MMMM')}`,
+            },
+            accessory: {
+              action_id: 'delete-session',
+              // Gonna do this... https://stackoverflow.com/questions/69460320/passing-additional-data-to-the-action-listeners-along-with-the-block-actions-pay
+              value: scheduledMessage.scheduled_message_id as string,
+              // value: JSON.stringify({ scheduledMessageId: scheduledMessage.scheduled_message_id, }),
+              //   scheduledMessageId: scheduledMessage.scheduled_message_id,
+              //   channel,
+              // },
+              type: 'button',
+              style: 'primary',
+              text: {
+                type: 'plain_text',
+                text: 'Delete session',
+              },
+            },
+          },
+        ],
       })
       // TODO: Post confirmation message for the posters eyes only
       return
     }
 
+    // @ts-ignore
     await client.chat.postMessage(pointItSessionMessage)
-  } catch (error) {
-    logger.error(error)
+  } catch (errorResponse) {
+    // @ts-ignore
+    const { ok, error } = errorResponse?.data || {}
+
+    if (ok) return
+
+    logger.error('viewSubmission:error', ok, error, errorResponse)
   }
 })
 

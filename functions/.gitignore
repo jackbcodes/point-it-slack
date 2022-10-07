@@ -7,3 +7,9 @@ typings/
 
 # Node.js dependency directory
 node_modules/
+
+# Runtime config
+.runtimeconfig.json
+
+# Firebase config
+src/pointit-bb794-firebase-adminsdk-h2xmw-615936ee78.json
