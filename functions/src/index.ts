@@ -2,6 +2,7 @@
 
 import { config, https } from 'firebase-functions'
 import { App, ExpressReceiver } from '@slack/bolt'
+import * as dayjs from 'dayjs'
 
 import { nowOrLaterActionBlock, dateTimeInputBlock, getChannelsPlayersBlock } from './blocks'
 import { formatUsers } from './utils'
@@ -138,6 +139,8 @@ You have been invited to vote in a <${gameUrl}|PointIt session>.
   ],
 })
 
+// TODO: Update the radio buttons so they appear throughout the modal
+
 // Listen for a view_submission event
 app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) => {
   await ack()
@@ -145,6 +148,9 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
   logger.info('payload2', JSON.stringify({ payload, body }))
 
   // TODO: Call Jack & Aaron's function here try...catch
+
+  const channel = view.state.values['channel']['channel-select-action'].selected_conversation
+
   const gameUrl = 'https://point-it-git-story-ado-integration-point-it.vercel.app/game/yfSZS3OXrlKoKbuQq0io'
 
   const users = view.state.values['users']['user-select-action'].selected_users
@@ -161,7 +167,7 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
   console.log(image_24, display_name)
 
   const pointItSessionMessage = generatePointItSessionMessage({
-    channel: view.state.values['channel']['channel-select-action'].selected_conversation,
+    channel,
     formattedUsers,
     gameUrl,
     initiatingUser: {
@@ -174,20 +180,35 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
     // TODO: Add scheduling here...
     const date = view.state.values['date']?.['datepicker-action'].selected_date
     const time = view.state.values['time']?.['timepicker-action'].selected_time
+    const dateTime = dayjs(`${date} ${time}`)
     if (date) {
       console.log(Date.parse([date, time].join('T')))
-      await client.chat.scheduleMessage({
+      const scheduledMessage = await client.chat.scheduleMessage({
         ...pointItSessionMessage,
-        text: "Looking towards the future",
-        post_at: Date.parse([date, time].join('T'))/1000,
+        text: 'Looking towards the future',
+        // TODO: Fix time zone malarky
+        post_at: Date.parse([date, time].join('T')) / 1000 - 3600,
+      })
+
+      console.log(scheduledMessage)
+
+      // TODO: Add delete session
+      await client.chat.postEphemeral({
+        user: body.user.id,
+        channel,
+        text: `:alarm_clock: Your PointIt session is scheduled for ${dateTime.format('HH:MMA on dddd, DD MMMM')}`,
       })
       // TODO: Post confirmation message for the posters eyes only
       return
     }
 
     await client.chat.postMessage(pointItSessionMessage)
-  } catch (error) {
-    logger.error(error)
+  } catch (errorResponse) {
+    const { ok, error } = errorResponse?.data || {}
+
+    if (ok) return
+
+    logger.error('viewSubmission:error', ok, error, errorResponse)
   }
 })
 
