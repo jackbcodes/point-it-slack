@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-export const nowOrLaterActionBlock = () => [
+export const nowOrLaterActionBlock = (initialOption) => [
   {
     type: 'header',
     text: {
@@ -14,15 +14,15 @@ export const nowOrLaterActionBlock = () => [
     elements: [
       {
         type: 'radio_buttons',
-        options: [
-          {
-            text: {
-              type: 'plain_text',
-              text: 'Schedule for another time',
-              emoji: true,
-            },
-            value: 'later',
+        initial_option: initialOption && {
+          text: {
+            type: 'plain_text',
+            text: initialOption === 'now' ? 'Play now' : 'Schedule for another time',
+            emoji: true,
           },
+          value: initialOption,
+        },
+        options: [
           {
             text: {
               type: 'plain_text',
@@ -30,6 +30,14 @@ export const nowOrLaterActionBlock = () => [
               emoji: true,
             },
             value: 'now',
+          },
+          {
+            text: {
+              type: 'plain_text',
+              text: 'Schedule for another time',
+              emoji: true,
+            },
+            value: 'later',
           },
         ],
         action_id: 'now-or-later',
@@ -39,6 +47,17 @@ export const nowOrLaterActionBlock = () => [
 ]
 
 export const dateTimeInputBlock = () => [
+  {
+    type: 'divider',
+  },
+  {
+    type: 'header',
+    text: {
+      type: 'plain_text',
+      text: 'Schedule game',
+      emoji: true,
+    },
+  },
   {
     type: 'input',
     block_id: 'date',
@@ -75,23 +94,22 @@ export const dateTimeInputBlock = () => [
       emoji: true,
     },
   },
-  {
-    type: 'divider',
-  },
 ]
 
 export const getChannelsPlayersBlock = () => [
   {
+    type: 'divider',
+  },
+  {
     type: 'header',
     text: {
       type: 'plain_text',
-      text: 'Select channel or players',
+      text: 'Select channel and players',
       emoji: true,
     },
   },
   {
     block_id: 'channel',
-    optional: true,
     type: 'input',
     element: {
       type: 'conversations_select',
@@ -111,6 +129,7 @@ export const getChannelsPlayersBlock = () => [
   },
   {
     block_id: 'users',
+    optional: true,
     type: 'input',
     element: {
       type: 'multi_users_select',
