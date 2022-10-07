@@ -126,7 +126,7 @@ const generatePointItSessionMessage = ({ channel, formattedUsers, gameUrl, initi
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: 'You have been invited to play in a Point It game.',
+        text: 'You have been invited to play in a PointIt game.',
       },
     },
     {
@@ -158,7 +158,7 @@ const generatePointItSessionMessage = ({ channel, formattedUsers, gameUrl, initi
         },
         {
           type: 'mrkdwn',
-          text: `Started by ${initiatingUser.displayName}`,
+          text: `Started by <@${initiatingUser.displayName}>`,
         },
       ],
     },
@@ -173,7 +173,7 @@ app.action('link_click', async ({ ack }) => {
 app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) => {
   await ack()
 
-  const doc = await admin.firestore().collection('games').add({ name: 'Slack Point It' })
+  const doc = await admin.firestore().collection('games').add({ name: 'Slack PointIt' })
 
   logger.info(doc)
 
@@ -214,7 +214,7 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
       console.log(Date.parse([date, time].join('T')))
       const scheduledMessage = await client.chat.scheduleMessage({
         ...pointItSessionMessage,
-        text: 'PointIt session',
+        text: 'You have been invited to join a game :wave:',
         // TODO: Fix time zone malarky
         // users.info zimezone... https://github.com/slackapi/bolt-js/issues/944
         post_at: String(dateTime.subtract(1, 'hour').unix()),
@@ -268,70 +268,7 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
   }
 })
 
-// ------------ Jack's code -------------
-
-// Handle `/echo` command invocations
-app.command('/echo-from-firebase2', async ({ ack, payload, client }) => {
-  // Acknowledge command request
-  await ack()
-
-  // const doc = await admin
-  //   .firestore()
-  //   .collection('games')
-  //   .add({ name: capitalizeFirstLetter(payload.channel_name) })
-
-  client.chat.postMessage({
-    channel: 'general',
-    blocks: [
-      {
-        type: 'section',
-        text: {
-          type: 'plain_text',
-          text: 'Hi @here :wave:',
-          emoji: true,
-        },
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'plain_text',
-          text: 'A refinement session is about to start.',
-          emoji: true,
-        },
-      },
-      {
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            text: {
-              type: 'plain_text',
-              text: 'Join session',
-              emoji: true,
-            },
-            value: '206rx9rvkX8fhgTU3Iw8',
-            action_id: 'join-session',
-          },
-        ],
-      },
-      {
-        type: 'context',
-        elements: [
-          {
-            type: 'image',
-            image_url: 'https://pbs.twimg.com/profile_images/625633822235693056/lNGUneLX_400x400.jpg',
-            alt_text: 'cute cat',
-          },
-          {
-            type: 'mrkdwn',
-            text: 'Started by *@Aaron Redden*',
-          },
-        ],
-      },
-    ],
-  })
-})
-
+// This will be used in native slack game
 app.action('join-session', async ({ ack, payload, body, client }) => {
   await ack()
 
