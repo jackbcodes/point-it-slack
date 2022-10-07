@@ -5,7 +5,8 @@
     "lint": "eslint --ext .js,.ts .",
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "serve": "npm run build && firebase serve --only functions",
+    "serve": "npm run build:watch && firebase serve --only functions",
+    "dev": "tsc-watch --onSuccess \"firebase serve --only functions\"",
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
@@ -17,6 +18,7 @@
   "main": "lib/index.js",
   "dependencies": {
     "@slack/bolt": "^2.2.3",
+    "axios": "^1.0.0",
     "firebase-admin": "^8.13.0",
     "firebase-functions": "^3.9.0"
   },
