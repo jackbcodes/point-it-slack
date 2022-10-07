@@ -116,7 +116,7 @@ app.command('/echo-from-firebase', async ({ ack, body, client, logger, payload }
 })
 
 // Listen for a now action
-app.action('now', async ({ ack, body, client, action }) => {
+app.action('now', async ({ ack, body, client }) => {
   await ack()
 
   const result = await client.views.update({
@@ -146,7 +146,7 @@ app.action('now', async ({ ack, body, client, action }) => {
 })
 
 // Listen for a later action
-app.action('later', async ({ ack, body, client, action }) => {
+app.action('later', async ({ ack, body, client }) => {
   await ack()
 
   const result = await client.views.update({
