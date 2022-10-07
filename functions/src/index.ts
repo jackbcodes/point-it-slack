@@ -205,9 +205,7 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
     const date = view.state.values['date']?.['datepicker-action'].selected_date
     const time = view.state.values['time']?.['timepicker-action'].selected_time
 
-    // TODO: Fix time zone malarky
-    // users.info zimezone... https://github.com/slackapi/bolt-js/issues/944
-    const dateTime = dayjs(`${date} ${time}`).subtract(1, 'hour')
+    const dateTime = dayjs(`${date} ${time}`)
 
     console.log('dateTime', date, time, dateTime, dateTime.format('HH:mm'))
 
@@ -216,7 +214,9 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
       const scheduledMessage = await client.chat.scheduleMessage({
         ...pointItSessionMessage,
         text: 'PointIt session',
-        post_at: String(dateTime.unix()),
+        // TODO: Fix time zone malarky
+        // users.info zimezone... https://github.com/slackapi/bolt-js/issues/944
+        post_at: String(dateTime.subtract(1, 'hour').unix()),
       })
 
       console.log(scheduledMessage)
@@ -225,7 +225,7 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
       await client.chat.postEphemeral({
         user: body.user.id,
         channel,
-        text: `:alarm_clock: Your PointIt session is scheduled for ${dateTime.format('HH:mmA on dddd, Do MMMM')}`,
+        text: `:thumbsup:  Your PointIt session is scheduled for ${dateTime.format('HH:mmA on dddd, Do MMMM')}`,
         blocks: [
           {
             type: 'section',
