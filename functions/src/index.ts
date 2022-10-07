@@ -1,19 +1,17 @@
 // @ts-nocheck
 
-import * as dayjs from 'dayjs'
-// import * as advancedFormat from 'dayjs/plugin/advancedFormat'
+import dayjs from 'dayjs'
+import advancedFormat from 'dayjs/plugin/advancedFormat'
 
 import { config, https } from 'firebase-functions'
 import admin from 'firebase-admin'
-
-import axios from 'axios'
 
 import { App, ExpressReceiver } from '@slack/bolt'
 
 import { nowOrLaterActionBlock, dateTimeInputBlock, getChannelsPlayersBlock } from './blocks'
 import { formatUsers } from './utils'
 
-// dayjs.extend(advancedFormat)
+dayjs.extend(advancedFormat)
 
 admin.initializeApp()
 
@@ -179,7 +177,8 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
 
   logger.info(doc)
 
-  // TODO: Call Jack & Aaron's function here try...catch
+  const channel = view.state.values['channel']['channel-select-action'].selected_conversation
+
   const gameUrl = `https://pointit.dev/game/${doc.id}`
 
   const users = view.state.values['users']['user-select-action'].selected_users
@@ -207,9 +206,7 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
     const date = view.state.values['date']?.['datepicker-action'].selected_date
     const time = view.state.values['time']?.['timepicker-action'].selected_time
 
-    // TODO: Fix time zone malarky
-    // users.info zimezone... https://github.com/slackapi/bolt-js/issues/944
-    const dateTime = dayjs(`${date} ${time}`).subtract(1, 'hour')
+    const dateTime = dayjs(`${date} ${time}`)
 
     console.log('dateTime', date, time, dateTime, dateTime.format('HH:mm'))
 
@@ -218,7 +215,9 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
       const scheduledMessage = await client.chat.scheduleMessage({
         ...pointItSessionMessage,
         text: 'PointIt session',
-        post_at: String(dateTime.unix()),
+        // TODO: Fix time zone malarky
+        // users.info zimezone... https://github.com/slackapi/bolt-js/issues/944
+        post_at: String(dateTime.subtract(1, 'hour').unix()),
       })
 
       console.log(scheduledMessage)
@@ -227,16 +226,16 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
       await client.chat.postEphemeral({
         user: body.user.id,
         channel,
-        text: `:alarm_clock: Your PointIt session is scheduled for ${dateTime.format('HH:mmA on dddd, D MMMM')}`,
+        text: `:thumbsup:  Your PointIt session is scheduled for ${dateTime.format('HH:mmA on dddd, Do MMMM')}`,
         blocks: [
           {
             type: 'section',
             text: {
               type: 'mrkdwn',
-              text: `:alarm_clock: Your PointIt session is scheduled for ${dateTime.format('HH:mmA on dddd, D MMMM')}`,
+              text: `:alarm_clock: Your PointIt session is scheduled for ${dateTime.format('HH:mmA on dddd, Do MMMM')}`,
             },
             accessory: {
-              action_id: 'delete-session',
+              // action_id: 'delete-session',
               // Gonna do this... https://stackoverflow.com/questions/69460320/passing-additional-data-to-the-action-listeners-along-with-the-block-actions-pay
               value: scheduledMessage.scheduled_message_id as string,
               // value: JSON.stringify({ scheduledMessageId: scheduledMessage.scheduled_message_id, }),
