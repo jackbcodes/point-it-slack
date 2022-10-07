@@ -22,6 +22,7 @@ export const nowOrLaterActionBlock = () => [
               emoji: true,
             },
             value: 'later',
+            action_id: 'later',
           },
           {
             text: {
@@ -30,9 +31,9 @@ export const nowOrLaterActionBlock = () => [
               emoji: true,
             },
             value: 'now',
+            action_id: 'now',
           },
         ],
-        action_id: 'now-or-later',
       },
     ],
   },

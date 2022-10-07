@@ -115,11 +115,9 @@ app.command('/echo-from-firebase', async ({ ack, body, client, logger, payload }
   }
 })
 
-// Listen for a now-or-later action
-app.action('now-or-later', async ({ ack, body, client, action }) => {
+// Listen for a now action
+app.action('now', async ({ ack, body, client, action }) => {
   await ack()
-
-  const nowOrLater = action['selected_option'].value
 
   const result = await client.views.update({
     view_id: body.view.id,
@@ -133,10 +131,41 @@ app.action('now-or-later', async ({ ack, body, client, action }) => {
         text: 'PointIt',
       },
       blocks: [
+        ...body.view.blocks,
         {
           type: 'divider',
         },
-        ...(nowOrLater === 'later' ? dateTimeInputBlock() : []),
+        ...getChannelsPlayersBlock(),
+      ],
+      submit: {
+        type: 'plain_text',
+        text: 'Submit',
+      },
+    },
+  })
+})
+
+// Listen for a later action
+app.action('later', async ({ ack, body, client, action }) => {
+  await ack()
+
+  const result = await client.views.update({
+    view_id: body.view.id,
+    hash: body.view.hash,
+    view: {
+      type: 'modal',
+      // TODO: Rename callback id
+      callback_id: 'pointit-modal',
+      title: {
+        type: 'plain_text',
+        text: 'PointIt',
+      },
+      blocks: [
+        ...body.view.blocks,
+        {
+          type: 'divider',
+        },
+        ...dateTimeInputBlock(),
         ...getChannelsPlayersBlock(),
       ],
       submit: {
