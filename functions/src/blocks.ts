@@ -135,14 +135,14 @@ export const getChannelsPlayersBlock = () => [
       type: 'multi_users_select',
       placeholder: {
         type: 'plain_text',
-        text: 'Select players44',
+        text: 'Select players',
         emoji: true,
       },
       action_id: 'user-select-action',
     },
     label: {
       type: 'plain_text',
-      text: 'Select users you want to play with',
+      text: 'Select users you want to notify',
       emoji: true,
     },
   },
