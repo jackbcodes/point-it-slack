@@ -163,13 +163,11 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
 
   const {
     user: {
-      profile: { image_24, display_name },
+      profile: { image_24, real_name, display_name },
     },
   } = await client.users.info({
     user: body.user.id,
   })
-
-  console.log(image_24, display_name)
 
   const pointItSessionMessage = generatePointItSessionMessage({
     channel: view.state.values['channel']['channel-select-action'].selected_conversation,
@@ -177,7 +175,7 @@ app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) =
     gameUrl,
     initiatingUser: {
       image: image_24,
-      displayName: display_name,
+      displayName: display_name.length ? display_name : real_name,
     },
   })
 
