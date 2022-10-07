@@ -31,8 +31,48 @@ const app = new App({
 
 // ------------ Dave's code ---------------
 
-// TODO: Change to shortcut
-// Listen for command to launch the modal
+app.shortcut({ callback_id: 'start_session' }, async ({ ack, shortcut, client, logger }) => {
+  await ack()
+
+  try {
+    const result = await client.views.open({
+      trigger_id: shortcut.trigger_id,
+      view: {
+        type: 'modal',
+        title: {
+          // TODO: Add Icon
+          type: 'plain_text',
+          text: 'PointIt',
+        },
+        blocks: [
+          // {
+          //   type: 'divider',
+          // },
+          // {
+          //   dispatch_action: true,
+          //   type: 'input',
+          //   element: {
+          //     type: 'plain_text_input',
+          //     action_id: 'plain_text_input-action',
+          //   },
+          //   label: {
+          //     type: 'plain_text',
+          //     text: 'Enter VSTS ticket number e.g. 898380',
+          //     emoji: true,
+          //   },
+          // },
+          {
+            type: 'divider',
+          },
+          ...nowOrLaterActionBlock(),
+        ],
+      },
+    })
+  } catch (error) {
+    logger.error(error)
+  }
+})
+
 app.command('/echo-from-firebase', async ({ ack, body, client, logger, payload }) => {
   await ack()
 
@@ -70,7 +110,6 @@ app.command('/echo-from-firebase', async ({ ack, body, client, logger, payload }
         ],
       },
     })
-    logger.info('result', result)
   } catch (error) {
     logger.error(error)
   }
@@ -152,8 +191,6 @@ You have been invited to vote in a <${gameUrl}|PointIt session>.
 // Listen for a view_submission event
 app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) => {
   await ack()
-
-  logger.info('payload2', JSON.stringify({ payload, body }))
 
   // TODO: Call Jack & Aaron's function here try...catch
   const gameUrl = 'https://point-it-git-story-ado-integration-point-it.vercel.app/game/yfSZS3OXrlKoKbuQq0io'
