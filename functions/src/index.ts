@@ -115,6 +115,7 @@ app.action('now-or-later', async ({ ack, body, client, action, logger }) => {
 
 const generatePointItSessionMessage = ({ channel, formattedUsers, gameUrl, initiatingUser }) => ({
   channel,
+  text: 'You have been invited to join a game :wave:',
   blocks: [
     {
       type: 'section',
