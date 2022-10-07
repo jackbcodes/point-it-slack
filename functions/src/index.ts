@@ -12,9 +12,9 @@ import { formatUsers } from './utils'
 
 admin.initializeApp()
 
-// const capitalizeFirstLetter = (string: string) => {
-//   return string.charAt(0).toUpperCase() + string.slice(1)
-// }
+const capitalizeFirstLetter = (string: string) => {
+  return string.charAt(0).toUpperCase() + string.slice(1)
+}
 
 const expressReceiver = new ExpressReceiver({
   signingSecret: config().slack.signing_secret,
@@ -31,14 +31,12 @@ const app = new App({
 
 // ------------ Dave's code ---------------
 
-// TODO: Change to shortcut
-// Listen for command to launch the modal
-app.command('/echo-from-firebase', async ({ ack, body, client, logger, payload }) => {
+app.shortcut({ callback_id: 'start_session' }, async ({ ack, shortcut, client, logger }) => {
   await ack()
 
   try {
     const result = await client.views.open({
-      trigger_id: body.trigger_id,
+      trigger_id: shortcut.trigger_id,
       view: {
         type: 'modal',
         title: {
@@ -70,17 +68,18 @@ app.command('/echo-from-firebase', async ({ ack, body, client, logger, payload }
         ],
       },
     })
-    logger.info('result', result)
   } catch (error) {
     logger.error(error)
   }
 })
 
 // Listen for a now-or-later action
-app.action('now-or-later', async ({ ack, body, client, action }) => {
+app.action('now-or-later', async ({ ack, body, client, action, logger }) => {
   await ack()
 
-  const nowOrLater = action['selected_option'].value
+  const nowOrLater = action['selected_option'].value || 'now'
+
+  logger.info('nowOrLater ===>', nowOrLater)
 
   const result = await client.views.update({
     view_id: body.view.id,
@@ -97,8 +96,9 @@ app.action('now-or-later', async ({ ack, body, client, action }) => {
         {
           type: 'divider',
         },
-        ...(nowOrLater === 'later' ? dateTimeInputBlock() : []),
+        ...nowOrLaterActionBlock(nowOrLater),
         ...getChannelsPlayersBlock(),
+        ...(nowOrLater === 'later' ? dateTimeInputBlock() : []),
       ],
       submit: {
         type: 'plain_text',
@@ -115,19 +115,31 @@ const generatePointItSessionMessage = ({ channel, formattedUsers, gameUrl, initi
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `Hi ${formattedUsers}
-You have been invited to vote in a <${gameUrl}|PointIt session>.
-        `,
+        text: `Hi ${formattedUsers} :wave:`,
       },
-      accessory: {
-        type: 'button',
-        value: gameUrl,
-        style: 'primary',
-        text: {
-          type: 'plain_text',
-          text: 'Join session',
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: 'You have been invited to play in a Point It game.',
+      },
+    },
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: 'Join session',
+            emoji: true,
+          },
+          style: 'primary',
+          url: gameUrl,
+          action_id: 'link_click',
         },
-      },
+      ],
     },
     {
       type: 'divider',
@@ -149,14 +161,20 @@ You have been invited to vote in a <${gameUrl}|PointIt session>.
   ],
 })
 
+app.action('link_click', async ({ ack }) => {
+  await ack()
+})
+
 // Listen for a view_submission event
 app.view('pointit-modal', async ({ ack, view, client, logger, payload, body }) => {
   await ack()
 
-  logger.info('payload2', JSON.stringify({ payload, body }))
+  const doc = await admin.firestore().collection('games').add({ name: 'Slack Point It' })
+
+  logger.info(doc)
 
   // TODO: Call Jack & Aaron's function here try...catch
-  const gameUrl = 'https://point-it-git-story-ado-integration-point-it.vercel.app/game/yfSZS3OXrlKoKbuQq0io'
+  const gameUrl = `https://pointit.dev/game/${doc.id}`
 
   const users = view.state.values['users']['user-select-action'].selected_users
   const formattedUsers = formatUsers(users)
